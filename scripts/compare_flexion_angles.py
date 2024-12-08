@@ -66,8 +66,8 @@ def plot_scatter(df, title, xlabel, ylabel, scatters: list, x_column='time', cut
         avg_pos_deriv = np.mean(positive_derivs) if len(positive_derivs) > 0 else 0
         avg_neg_deriv = np.mean(negative_derivs) if len(negative_derivs) > 0 else 0
         print(title)
-        print(round(avg_pos_deriv, 5), " = AVG Extension Derivative")
-        print(round(avg_neg_deriv, 5), " = AVG Flexion Derivative")
+        print(round(avg_pos_deriv, 5), " = AVG Flexion Derivative")
+        print(round(avg_neg_deriv, 5), " = AVG Extension Derivative")
         print(f"Ext {'<' if avg_pos_deriv < abs(avg_neg_deriv) else '>'} Flex")
         print()
 
