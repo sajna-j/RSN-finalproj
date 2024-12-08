@@ -1,5 +1,6 @@
 from typing import List
-from scipy.signal import butter, sosfilt, freqz
+from scipy.signal import butter, sosfilt, freqz, savgol_filter
+import numpy as np
 from bag_dataframes import (
     # CALF DATASETS
     calf_law_stairs1_df, calf_law_stairs2_df,
@@ -18,7 +19,7 @@ from bag_dataframes import (
 
 import matplotlib.pyplot as plt
 sampl_freq=40
-cutoff_freq=3
+cutoff_freq=1
 order=4
 
 def butter_filter(raw_data, cutoff_freq, sampl_freq, filt_type, filt_order):
@@ -27,52 +28,66 @@ def butter_filter(raw_data, cutoff_freq, sampl_freq, filt_type, filt_order):
     filtered_data = sosfilt(sos, raw_data)
     return sos, filtered_data
 
-def plot_scatter(df, title, xlabel, ylabel, scatters: List[str], x_column='time'):
+def plot_scatter(df, title, xlabel, ylabel, scatters: list, x_column='time', cutoff_freq=3, sampl_freq=40):
     """
-    Create a scatter plot with multiple datasets.
+    Create a scatter plot with multiple datasets and display filtered data and its derivative.
 
     Parameters:
-    - title (str): Title of the plot.
+    - df (pd.DataFrame): The dataset.
+    - title (str): Title of the scatter plot.
     - xlabel (str): Label for the X-axis.
     - ylabel (str): Label for the Y-axis.
-    - scatter_datasets (list of dict): Each dataset is a dictionary with:
-        - 'x' (list or array): X values.
-        - 'y' (list or array): Y values.
-        - 'label' (str): Label for the dataset (optional).
-        - 'color' (str, optional): Color for the scatter points.
-        - 'marker' (str, optional): Marker style for scatter points.
-
-    Example Usage:
-    plot_scatter(
-        title="Example Scatter Plot",
-        xlabel="X-axis Label",
-        ylabel="Y-axis Label",
-        scatter_datasets=[
-            {'x': [1, 2, 3], 'y': [4, 5, 6], 'label': 'Dataset 1', 'color': 'red', 'marker': 'o'},
-            {'x': [2, 3, 4], 'y': [3, 4, 5], 'label': 'Dataset 2', 'color': 'blue', 'marker': 'x'}
-        ]
-    )
+    - scatters (list): List of column names to plot.
+    - x_column (str): Column name for the X-axis data.
+    - cutoff_freq (float): Cutoff frequency for filtering.
+    - sampl_freq (float): Sampling frequency.
     """
-    plt.figure(figsize=(12, 7))
-
-    # Loop through each scatter dataset and plot
+    # Create subplots: 2 rows, 1 column
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
     x = df[x_column].to_numpy()
+
+    # Subplot 1: Scatter and filtered data
     for data_label in scatters:
         y = df[data_label].to_numpy()
-        plt.plot(x, y, label=data_label, linestyle='-')
 
-        # I'm filtering the dataset to make room for us to be able to get like CLEAR mins/maxes 
-        #   and compare the typical angle upwards for each body part and compare (hopefully higher for thigh, but seems to be otherwise)
-        # sample freq. is 40, I set the cutoff to 3 Hz bc we def don't walk fast enough to make 3 steps a sec
+        # Plot raw data
+        axs[0].plot(x, y, label=f"{data_label}", linestyle='-')
+
+        # Apply low-pass filter
         sos, filtered_y = butter_filter(y, cutoff_freq, sampl_freq, "lowpass", 5)
-        plt.plot(x, filtered_y, label=f"{data_label} filtered", linestyle='-')
+        axs[0].plot(x, filtered_y, label=f"{data_label} filtered", linestyle='--')
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend()
-    plt.grid()
-    plt.title(title)
-    plt.grid(True)
+        # Calculate derivative
+        smooth_deriv = savgol_filter(filtered_y, window_length=5, polyorder=2, deriv=1, delta=1)
+
+        # Calculate positive and negative derivative averages
+        positive_derivs = smooth_deriv[smooth_deriv > 0]  # Filter positive values to represent EXTENSION
+        negative_derivs = smooth_deriv[smooth_deriv < 0]  # Filter negative values to represent FLEXION
+        avg_pos_deriv = np.mean(positive_derivs) if len(positive_derivs) > 0 else 0
+        avg_neg_deriv = np.mean(negative_derivs) if len(negative_derivs) > 0 else 0
+        print(title)
+        print(avg_pos_deriv, " = AVG Extension Derivative")
+        print(avg_neg_deriv, " = AVG Flexion Derivative")
+        print(f"Ext {'<' if avg_pos_deriv < abs(avg_neg_deriv) else '>'} Flex")
+        print()
+
+    # Formatting for Subplot 1
+    axs[0].set_title(title)
+    axs[0].set_xlabel(xlabel)
+    axs[0].set_ylabel(ylabel)
+    axs[0].legend()
+    axs[0].grid()
+
+    # Subplot 2: Derivative of filtered data
+    axs[1].plot(x, smooth_deriv, label='Derivative', linestyle='-')
+    axs[1].set_title("Derivative of Filtered Data")
+    axs[1].set_xlabel("Time")
+    axs[1].set_ylabel("Derivative Value")
+    axs[1].legend()
+    axs[1].grid()
+
+    # Adjust layout and show the figure
+    plt.tight_layout()
     plt.show()
 
 
@@ -115,6 +130,21 @@ plot_scatter(thigh_carter_ramp1_df, "Magnetometer Thigh Ramp Carter 1", "Time (s
 
 calibrate(thigh_carter_ramp2_df, ["magZ"])
 plot_scatter(thigh_carter_ramp2_df, "Magnetometer Thigh Ramp Carter 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_carter_stairs1_df, ["magZ"])
+plot_scatter(calf_carter_stairs1_df, "Magnetometer Calf Stairs Carter 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_carter_stairs2_df, ['magZ'])
+plot_scatter(calf_carter_stairs2_df, "Magnetometer Calf Stairs Carter 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_carter_ramp1_df, ["magZ"])
+plot_scatter(calf_carter_ramp1_df, "Magnetometer Calf Ramp Carter 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_carter_ramp2_df, ["magZ"])
+plot_scatter(calf_carter_ramp2_df, "Magnetometer Calf Ramp Carter 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+
+
 
 # TODO: do the above for all of the stairs and ramps datasets
 
