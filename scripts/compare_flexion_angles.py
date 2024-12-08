@@ -1,5 +1,5 @@
 from typing import List
-from scipy.signal import butter, sosfilt, freqz, savgol_filter
+from scipy.signal import butter, sosfilt, freqz, savgol_filter, integrate
 import numpy as np
 from bag_dataframes import (
     # CALF DATASETS
@@ -66,8 +66,8 @@ def plot_scatter(df, title, xlabel, ylabel, scatters: list, x_column='time', cut
         avg_pos_deriv = np.mean(positive_derivs) if len(positive_derivs) > 0 else 0
         avg_neg_deriv = np.mean(negative_derivs) if len(negative_derivs) > 0 else 0
         print(title)
-        print(avg_pos_deriv, " = AVG Extension Derivative")
-        print(avg_neg_deriv, " = AVG Flexion Derivative")
+        print(round(avg_pos_deriv, 5), " = AVG Extension Derivative")
+        print(round(avg_neg_deriv, 5), " = AVG Flexion Derivative")
         print(f"Ext {'<' if avg_pos_deriv < abs(avg_neg_deriv) else '>'} Flex")
         print()
 
@@ -89,7 +89,6 @@ def plot_scatter(df, title, xlabel, ylabel, scatters: list, x_column='time', cut
     # Adjust layout and show the figure
     plt.tight_layout()
     plt.show()
-
 
 def calibrate(df, columns, start_sec=3, end_sec=8):
     """
@@ -142,6 +141,30 @@ plot_scatter(calf_carter_ramp1_df, "Magnetometer Calf Ramp Carter 1", "Time (s)"
 
 calibrate(calf_carter_ramp2_df, ["magZ"])
 plot_scatter(calf_carter_ramp2_df, "Magnetometer Calf Ramp Carter 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(thigh_law_stairs1_df, ["magZ"])
+plot_scatter(thigh_law_stairs1_df, "Magnetometer Thigh Stairs Law 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(thigh_law_stairs2_df, ['magZ'])
+plot_scatter(thigh_law_stairs2_df, "Magnetometer Thigh Stairs Law 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(thigh_law_ramp1_df, ["magZ"])
+plot_scatter(thigh_law_ramp1_df, "Magnetometer Thigh Ramp Law 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(thigh_law_ramp2_df, ["magZ"])
+plot_scatter(thigh_law_ramp2_df, "Magnetometer Thigh Ramp Law 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_law_stairs1_df, ["magZ"])
+plot_scatter(calf_law_stairs1_df, "Magnetometer Calf Stairs Law 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_law_stairs2_df, ['magZ'])
+plot_scatter(calf_law_stairs2_df, "Magnetometer Calf Stairs Law 2", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_law_ramp1_df, ["magZ"])
+plot_scatter(calf_law_ramp1_df, "Magnetometer Calf Ramp Law 1", "Time (s)", "Reading (rad)", ["magZ"])
+
+calibrate(calf_law_ramp2_df, ["magZ"])
+plot_scatter(calf_law_ramp2_df, "Magnetometer Calf Ramp Law 2", "Time (s)", "Reading (rad)", ["magZ"])
 
 
 
